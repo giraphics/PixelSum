@@ -18,38 +18,46 @@ struct Vector4
         struct{ T y0 ,   x0,     y1,    x1; };
     };
 };
-typedef struct Vector4<int> PixelBufferCoords_i; // Pixel buffer's (x0, y0), (x1, y1), _i for type int
-typedef struct Vector4<int> PixBufTLBR_i;        // Pixel buffer's top, left bottom, right, _i for type int
+typedef struct Vector4<int> PixelBufferCoords_i; // Pixel buffer's (x0, y0), (x1, y1) representation, _i for type int
+typedef struct Vector4<int> PixBufTLBR_i;        // Pixel buffer's top, left bottom, right representation, _i for type int
 
 class PixelSum
 {
 public:
     PixelSum() = default;
-    PixelSum(const unsigned char* buffer, int xWidth, int yHeight);
+    PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight);
     ~PixelSum(void);
 
     PixelSum(const PixelSum& p_PixelSum);
     PixelSum& operator= (const PixelSum& p_PixelSum);
 
-    unsigned int getPixelSum(int x0, int y0, int x1, int y1) const;
-    double getPixelAverage(int x0, int y0, int x1, int y1) const;
+    unsigned int getPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    double getPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
 
-    int getNonZeroCount(int x0, int y0, int x1, int y1) const;
-    double getNonZeroAverage(int x0, int y0, int x1, int y1) const;
+    int getNonZeroCount(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    double getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
 
 private:
-    template<typename T>
-    bool allocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize);
-
-    enum PixelSumPassType
+    enum class PixelSumPassType
     {
-        HorizontalPass = (1u << 0u),
-        VerticalPass   = (1u << 1u),
+        Horizontal = (1u << 0u),
+        Vertical   = (1u << 1u),
     };
-    bool computeSumAreaMatrixForPixelBufferPass(PixelSumPassType p_IsHPass, const unsigned char* p_PixelBuffer, uint32_t* p_SumAreaPixBuf, uint32_t* p_SumAreaNonZero);
+
+    enum class PixelSumOperationType
+    {
+        SummedAreaTable     = (1u << 0u),
+        NonZeroElementCount = (1u << 1u),
+    };
+
+    template<typename T>
+    bool computePixelSum(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
 
     template<typename T>
     unsigned int computeSumAreaForSearchWindow(int x0, int y0, int x1, int y1, T* p_SumArea) const;
+
+    template<typename T>
+    bool allocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize);
 
 private:
     PixBufTLBR_i m_SourcePixBufTLBR;
@@ -60,7 +68,7 @@ private:
 
     // Sum area of pixel buffer's non-zero components, the non-zero element can be marked with 1 and zero with 0.
     // With 4096x4096 and 1 as max possible value the sum cannot go greater that unsigned 16bit storage max value range.
-    uint32_t* m_SumAreaNonZero = nullptr; // TODO mention the reason why
+    uint32_t* m_SumAreaNonZero = nullptr;
 };
 
 // What should the the data type of SumArea
