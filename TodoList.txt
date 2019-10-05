@@ -1,0 +1,5 @@
+TODO
+- Remove GFX from memory preprocessor
+- Check where performance test needs to kept or not, if needs to kept use 'ms' in print
+- Build Qt and Cmake sh
+- Remove PixelSumNaive and PixelSumTheirs
