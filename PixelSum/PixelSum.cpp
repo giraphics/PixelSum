@@ -13,27 +13,32 @@ PixelSum::PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight)
     // This helps in quick allocation and deallocation of pixel sum preventing performance hiches
     // that can cause by constant allocation and deallocation Pixel Sum class objects.
     const size_t srcBufferPixelCount = m_SourcePixBufTLBR.width() * m_SourcePixBufTLBR.height();
-    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaPixBuf, srcBufferPixelCount);
-    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZero, srcBufferPixelCount);
+    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaTable, srcBufferPixelCount);
+    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZeroTable, srcBufferPixelCount);
 
     // The summed matrix pixel buffer is computed in two passes (1) Horizontal and (2) Vertical
     {
         DefaultResults results;
         ScopedTimer Timer(results);
-        computePixelSum<uint32_t>(PixelSumPassType::Horizontal, PixelSumOperationType::SummedAreaTable, p_Buffer, m_SumAreaPixBuf);
-        computePixelSum<uint32_t>(PixelSumPassType::Vertical,   PixelSumOperationType::SummedAreaTable, p_Buffer, m_SumAreaPixBuf);
+        computePixelSum<uint32_t>(PixelSumOperationType::SummedAreaTable, p_Buffer, m_SumAreaTable);
     }
 
     // Non-Zero Element summed matrix is computed in two passes (1) Horizontal and (2) Vertical
     {
         DefaultResults results;
         ScopedTimer Timer(results);
-        computePixelSum<uint32_t>(PixelSumPassType::Horizontal, PixelSumOperationType::NonZeroElementCount, p_Buffer, m_SumAreaNonZero);
-        computePixelSum<uint32_t>(PixelSumPassType::Vertical,   PixelSumOperationType::NonZeroElementCount, p_Buffer, m_SumAreaNonZero);
+        computePixelSum<uint32_t>(PixelSumOperationType::NonZeroElementCount, p_Buffer, m_SumAreaNonZeroTable);
     }
 
     // Note: The two m_SumAreaPixBuf and m_SumAreaNonZero can be computed in single
     // function call which might a marginal faster but not a good idea for scalablily
+}
+
+template<typename T>
+bool PixelSum::computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
+{
+    pixelSumPass<T>(PixelSumPassType::Horizontal, p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+    pixelSumPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
 }
 
 PixelSum::~PixelSum()
@@ -41,8 +46,8 @@ PixelSum::~PixelSum()
     // Free the memory, this memory will return back to Virtual Memory free stack,
     // where it can be efficiently reused again and again without
 
-    VM::MemoryAllocator::GetInstance().Free(m_SumAreaPixBuf);
-    VM::MemoryAllocator::GetInstance().Free(m_SumAreaNonZero);
+    VM::MemoryAllocator::GetInstance().Free(m_SumAreaTable);
+    VM::MemoryAllocator::GetInstance().Free(m_SumAreaNonZeroTable);
 }
 
 PixelSum::PixelSum(const PixelSum& p_PixelSum)
@@ -52,12 +57,12 @@ PixelSum::PixelSum(const PixelSum& p_PixelSum)
     const size_t srcBufferPixelCount = m_SourcePixBufTLBR.width() * m_SourcePixBufTLBR.height();
 
     // Deep copy the sum areas pixel buffer
-    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaPixBuf, srcBufferPixelCount);
-    memcpy(m_SumAreaPixBuf, p_PixelSum.m_SumAreaPixBuf, srcBufferPixelCount * sizeof(uint32_t));
+    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaTable, srcBufferPixelCount);
+    memcpy(m_SumAreaTable, p_PixelSum.m_SumAreaTable, srcBufferPixelCount * sizeof(uint32_t));
 
     // Deep copy the non-zero elements sum areas
-    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZero, srcBufferPixelCount);
-    memcpy(m_SumAreaNonZero, p_PixelSum.m_SumAreaNonZero, srcBufferPixelCount * sizeof(uint32_t));
+    allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZeroTable, srcBufferPixelCount);
+    memcpy(m_SumAreaNonZeroTable, p_PixelSum.m_SumAreaNonZeroTable, srcBufferPixelCount * sizeof(uint32_t));
 }
 
 PixelSum& PixelSum::operator=(const PixelSum& p_PixelSum)
@@ -65,14 +70,14 @@ PixelSum& PixelSum::operator=(const PixelSum& p_PixelSum)
     if (this != &p_PixelSum)
     {
         // 1. Free the existing summed area matrixes if object is being reassigned
-        if (m_SumAreaPixBuf)
+        if (m_SumAreaTable)
         {
-            VM::MemoryAllocator::GetInstance().Free(m_SumAreaPixBuf);
+            VM::MemoryAllocator::GetInstance().Free(m_SumAreaTable);
         }
 
-        if (m_SumAreaNonZero)
+        if (m_SumAreaNonZeroTable)
         {
-            VM::MemoryAllocator::GetInstance().Free(m_SumAreaNonZero);
+            VM::MemoryAllocator::GetInstance().Free(m_SumAreaNonZeroTable);
         }
 
         // 2. Overwrite the pixel buffer top-left and bottom-right
@@ -81,47 +86,21 @@ PixelSum& PixelSum::operator=(const PixelSum& p_PixelSum)
         // Perform Deep copy for both summed area matrix
         const size_t srcBufferPixelCount = m_SourcePixBufTLBR.width() * m_SourcePixBufTLBR.height();
 
-        allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaPixBuf, srcBufferPixelCount);
-        memcpy(m_SumAreaPixBuf, p_PixelSum.m_SumAreaPixBuf, srcBufferPixelCount * sizeof(uint32_t));
+        allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaTable, srcBufferPixelCount);
+        memcpy(m_SumAreaTable, p_PixelSum.m_SumAreaTable, srcBufferPixelCount * sizeof(uint32_t));
 
-        allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZero, srcBufferPixelCount);
-        memcpy(m_SumAreaNonZero, p_PixelSum.m_SumAreaNonZero, srcBufferPixelCount * sizeof(uint32_t));
+        allocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZeroTable, srcBufferPixelCount);
+        memcpy(m_SumAreaNonZeroTable, p_PixelSum.m_SumAreaNonZeroTable, srcBufferPixelCount * sizeof(uint32_t));
     }
 
     return *this;
 }
 
-/********************************************************************************
-From: https://en.wikipedia.org/wiki/Summed-area_table
-
-        0              1              2               3      A => Area((0,0) To (1, 1))
-      0 +--------------+------------------------------+
-        |              |                              |      B => Area((0,0) To (1, 3))
-        |              |                              |
-        |              |                              |      C => Area((0,0) To (3, 1))
-        |              |                              |
-        |              |                              |      D => Area((0,0) To (3, 3))
-      1 +---------------------------------------------+
-        |              |A                             |B
-        |              |                              |      Summed Area(ABCD) => D - C - B + A
-        |              |                              |
-        |              |                              |
-        |              |                              |
-      2 |              |                              |
-        |              |                              |
-        |              |                              |
-        |              |                              |
-        |              |                              |
-        |              |                              |
-      3 +--------------+------------------------------+
-                       C                              D
-
-*********************************************************************************/
 unsigned int PixelSum::getPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 {
     if (!s_ValidateSearchWindowClipCoords(p_X0, p_Y0, p_X1, p_Y1, m_SourcePixBufTLBR)) return 0;
 
-    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaPixBuf);
+    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaTable);
 }
 
 double PixelSum::getPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
@@ -130,12 +109,12 @@ double PixelSum::getPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 
     if (searchWindowPixelCount == 0) return 0.0;
 
-    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaPixBuf) / static_cast<double>(searchWindowPixelCount);
+    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaTable) / static_cast<double>(searchWindowPixelCount);
 }
 
 int PixelSum::getNonZeroCount(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 {
-    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaNonZero);
+    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaNonZeroTable);
 }
 
 double PixelSum::getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
@@ -144,11 +123,11 @@ double PixelSum::getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 
     if (searchWindowPixelCount == 0) return 0.0;
 
-    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaNonZero) / static_cast<double>(searchWindowPixelCount);
+    return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaNonZeroTable) / static_cast<double>(searchWindowPixelCount);
 }
 
 template<typename T>
-bool PixelSum::computePixelSum(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+bool PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
 {
     if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return false;
 
@@ -189,6 +168,29 @@ bool PixelSum::allocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t
     return p_SumAreaMatrix != nullptr;
 }
 
+/********************************************************************************
+        0              1              2               3      A => Area((0,0) To (1, 1))
+      0 +--------------+------------------------------+
+        |              |                              |      B => Area((0,0) To (1, 3))
+        |              |                              |
+        |              |                              |      C => Area((0,0) To (3, 1))
+        |              |                              |
+        |              |                              |      D => Area((0,0) To (3, 3))
+      1 +---------------------------------------------+
+        |              |A                             |B
+        |              |                              |      Summed Area(ABCD) => D - C - B + A
+        |              |                              |
+        |              |                              |
+        |              |                              |
+      2 |              |                              |
+        |              |                              |
+        |              |                              |
+        |              |                              |
+        |              |                              |
+        |              |                              |
+      3 +--------------+------------------------------+
+                       C                              D
+*********************************************************************************/
 template<typename T>
 unsigned int PixelSum::computeSumAreaForSearchWindow(int x0, int y0, int x1, int y1, T* p_SumArea) const
 {

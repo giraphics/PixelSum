@@ -50,32 +50,49 @@ private:
         NonZeroElementCount = (1u << 1u),
     };
 
+    /*!
+     * Compute the pixel sum in either horizontal or vertical pass. It can compute sumarea for pixel buffer value or non-zero elements
+     */
     template<typename T>
-    bool computePixelSum(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    bool pixelSumPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
 
+    /*!
+     * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
+     */
+    template<typename T>
+    bool computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
+
+    /*!
+     * Compute the Sum area of the search window coordinates with below formula
+     *         0        1       2       3
+     * 0 +--------+---------------+      A => Area((0,0) To (1, 1))
+     *   |        |               |      B => Area((0,0) To (1, 3))
+     *   |        |               |      C => Area((0,0) To (3, 1))
+     *   |        |               |      D => Area((0,0) To (3, 3))
+     * 1 +------------------------+
+     *   |        |A              |B
+     *   |        |               |      Summed Area(ABCD) => D - C - B + A
+     * 2 |        |               |
+     *   |        |               |
+     * 3 +--------+---------------+
+     *            C               D
+     */
     template<typename T>
     unsigned int computeSumAreaForSearchWindow(int x0, int y0, int x1, int y1, T* p_SumArea) const;
 
+    /*!
+     * Allocate virtual memory from preallocated memory pool for summed area matrix
+     */
     template<typename T>
     bool allocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize);
 
 private:
     PixBufTLBR_i m_SourcePixBufTLBR;
 
-    // Sum area of pixel buffer, since max size can be 4096x4096 with highest possible val 255,
-    // the unsigned 32bit storage is more than enough
-    uint32_t* m_SumAreaPixBuf = nullptr;
+    // Max image size can be 4096x4096 with highest possible val 255, therefore unsigned 32bit storage is more than enough
+    uint32_t* m_SumAreaTable = nullptr; /*!< Summed area table for pixel buffer */
 
-    // Sum area of pixel buffer's non-zero components, the non-zero element can be marked with 1 and zero with 0.
-    // With 4096x4096 and 1 as max possible value the sum cannot go greater that unsigned 16bit storage max value range.
-    uint32_t* m_SumAreaNonZero = nullptr;
+    // The non-zero element can be marked with 1 and zero with 0.
+    // With 4096x4096 and 1 as max possible value, 32bit storage suffice.
+    uint32_t* m_SumAreaNonZeroTable = nullptr; /*!< Summed area table for non-zero pixel buffer */
 };
-
-// What should the the data type of SumArea
-// TODO: Doygen doc comments
-
-
-// Test cases:
-// Write test case for boundary checks - -1,-1 to 0, 0
-// Check if Nan return type can be possible
-// https://github.com/gfx/cpp-scoped_timer/blob/master/example/rope.cpp - do it

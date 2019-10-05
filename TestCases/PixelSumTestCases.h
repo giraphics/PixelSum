@@ -8,30 +8,27 @@
 #include "PixelSumTheirs.h"
 #include "PixelSum.h"
 
-constexpr int MAX_IMAGE_COUNT              = 10;
-constexpr int MAX_SUMMED_AREA_PIXEL_BUFFER = MAX_IMAGE_COUNT * 2;
-constexpr int MAX_SUMMED_AREA_NON_ZERO     = MAX_SUMMED_AREA_PIXEL_BUFFER;
-
 #define IMAGE_MAX_DIMENSION 4096
 #define CORRECT_IMAGE_DIMENSION(IMG_DIM) (g_Clamp(IMG_DIM, 0 , IMAGE_MAX_DIMENSION))
 
-const int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
-const int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
+const static int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
+const static int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
+const static int IMAGE_BOTTOM = (IMAGE_HEIGHT - 1);
+const static int IMAGE_RIGHT  = (IMAGE_WIDTH  - 1);
 
-#define IMAGE_BOTTOM (IMAGE_HEIGHT - 1)
-#define IMAGE_RIGHT  (IMAGE_WIDTH  - 1)
-
-void SetUp()
+// Preallocate the memory for our pixel buffer and summed area matrix.
+void PreallocateMemoryVirtualMemory(uint32_t p_MaxImageCount, uint32_t p_MaxSummedAreaPixelBuffer, uint32_t p_MaxSummedAreaNonZero)
 {
     std::vector<VM::UserMemoryRequirementConfig> userMemoryRequirement =
     {
-        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint8_t) , MAX_IMAGE_COUNT              },
-        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint32_t), MAX_SUMMED_AREA_PIXEL_BUFFER },
-        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint16_t), MAX_SUMMED_AREA_NON_ZERO     },
+        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint8_t) , p_MaxImageCount            },
+        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint32_t), p_MaxSummedAreaPixelBuffer },
+        { IMAGE_WIDTH * IMAGE_HEIGHT * sizeof(uint32_t), p_MaxSummedAreaNonZero     },
     };
     VM::MemoryAllocator::GetInstance().ConfigureMemory(userMemoryRequirement);
 }
 
+// Validate the image dimensions
 void ConfigureMemoryTest()
 {
     EXPECT_EQ(IMAGE_WIDTH  > 0, true, "Image Left Validation");
@@ -289,7 +286,11 @@ void nonZeroCountElementsCounts()
 
 void TestCaseEntry()
 {
-    SetUp();
+    constexpr int MAX_IMAGE_COUNT              = 10;
+    constexpr int MAX_SUMMED_AREA_PIXEL_BUFFER = MAX_IMAGE_COUNT * 2;
+    constexpr int MAX_SUMMED_AREA_NON_ZERO     = MAX_SUMMED_AREA_PIXEL_BUFFER;
+
+    PreallocateMemoryVirtualMemory(MAX_IMAGE_COUNT, MAX_SUMMED_AREA_PIXEL_BUFFER, MAX_SUMMED_AREA_NON_ZERO);
 //    Image* imageFullSize = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 //    PixelSum* pixelSumFullSize = new PixelSum(imageFullSize->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 //return;

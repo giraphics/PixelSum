@@ -2,6 +2,7 @@
 
 #include "MemoryAllocator.h"
 
+// An Image helper class that hold the pixel buffer.
 class Image
 {
 public:
@@ -12,13 +13,13 @@ public:
         m_Buffer = m_MemoryAllocator->Allocate(m_Width * m_Height);
     }
 
-    unsigned char* GetPixelBufferPtr() { return reinterpret_cast<unsigned char*>(m_Buffer); }
-    void PrintData();
-
     ~Image()
     {
         m_MemoryAllocator->Free(m_Buffer);
     }
+
+    unsigned char* GetPixelBufferPtr() { return reinterpret_cast<unsigned char*>(m_Buffer); }
+    void PrintData();
 
 private:
     VM::MemoryAllocator* m_MemoryAllocator = &VM::MemoryAllocator::GetInstance();
