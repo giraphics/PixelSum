@@ -10,10 +10,9 @@ set(${PROJECT_NAME}_EXEC_SOURCE
     MemoryMgmt/MemoryAllocator.cpp
 
     PixelSum/PixelSum.cpp
-    PixelSum/PixelSumTheirs.cpp
     PixelSum/PixelSumNaive.cpp
 
-	main.cpp
+    main.cpp
 )
 
 set(${PROJECT_NAME}_EXEC_HEADERS
@@ -28,7 +27,6 @@ set(${PROJECT_NAME}_EXEC_HEADERS
     PixelSum/HelperClasses/LogMacros.h
 
     PixelSum/PixelSum.h
-    PixelSum/PixelSumTheirs.h
     PixelSum/PixelSumNaive.h
 
     TestCases/PixelSumTestCases.h

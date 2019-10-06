@@ -35,10 +35,11 @@ PixelSum::PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight)
 }
 
 template<typename T>
-bool PixelSum::computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
+void PixelSum::computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
 {
     pixelSumPass<T>(PixelSumPassType::Horizontal, p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
-    pixelSumPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+    //pixelSumPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+    pixelSumPassVerticalPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
 }
 
 PixelSum::~PixelSum()
@@ -107,7 +108,7 @@ double PixelSum::getPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 {
     uint32_t searchWindowPixelCount = s_ValidateSearchWindowClipCoords(p_X0, p_Y0, p_X1, p_Y1, m_SourcePixBufTLBR);
 
-    if (searchWindowPixelCount == 0) return 0.0;
+    if (searchWindowPixelCount == 0) return 0.0; // Prevent return Nan
 
     return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaTable) / static_cast<double>(searchWindowPixelCount);
 }
@@ -126,15 +127,49 @@ double PixelSum::getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
     return computeSumAreaForSearchWindow<uint32_t>(p_X0, p_Y0, p_X1, p_Y1, m_SumAreaNonZeroTable) / static_cast<double>(searchWindowPixelCount);
 }
 
+//template<typename T>
+//void PixelSum::pixelSumPassOrig(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+//{
+//    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
+
+//    const int srcPixBufWidth  = m_SourcePixBufTLBR.width();
+//    const int srcPixBufHeight = m_SourcePixBufTLBR.height();
+
+//    if (srcPixBufWidth * srcPixBufHeight == 0) return;
+
+//    T* sumAreaPtr = p_SumAreaPixelBuffer;
+//    const uint8_t* pixelBufferPtr = p_PixelBuffer;
+//    for (int row = 0; row < srcPixBufHeight; row++)
+//    {
+//        const bool isFirstRow = (row == 0);
+//        for (int col = 0; col < srcPixBufWidth; col++)
+//        {
+//            if (p_PassType == PixelSumPassType::Horizontal)
+//            {
+//                *sumAreaPtr = (p_OperationType == PixelSumOperationType::NonZeroElementCount) ? ((*pixelBufferPtr == 0) ? 0 : 1) : *pixelBufferPtr;
+//                *sumAreaPtr += (col == 0)/*isFirstCol*/ ? 0 : *(sumAreaPtr - 1);
+//            }
+//            else
+//            {
+//                *sumAreaPtr += isFirstRow ? 0 : *(sumAreaPtr - srcPixBufWidth);
+//            }
+
+//            pixelBufferPtr++;
+
+//            sumAreaPtr++;
+//        }
+//    }
+//}
+
 template<typename T>
-bool PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+void PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
 {
-    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return false;
+    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
 
     const int srcPixBufWidth  = m_SourcePixBufTLBR.width();
     const int srcPixBufHeight = m_SourcePixBufTLBR.height();
 
-    if (srcPixBufWidth * srcPixBufHeight == 0) return false;
+    if (srcPixBufWidth * srcPixBufHeight == 0) return;
 
     T* sumAreaPtr = p_SumAreaPixelBuffer;
     const uint8_t* pixelBufferPtr = p_PixelBuffer;
@@ -157,6 +192,84 @@ bool PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p
 
             sumAreaPtr++;
         }
+    }
+}
+
+#include <immintrin.h>
+int PixelSum::add_SSE(int size, unsigned int* first_array, unsigned int* second_array)
+{
+    int i = 0;
+//    std::cout<< "Before Curr =>";
+//    for (int j = 0; j < size; ++j)
+//    {
+//        std::cout<< second_array[j] << ", ";
+//    }
+//    std::cout << std::endl;
+
+//    std::cout<< "Before Prev =>";
+//    for (int j = 0; j < size; ++j)
+//    {
+//        std::cout<< first_array[j] << ", ";
+//    }
+//    std::cout << std::endl;
+//    std::cout << "----------------------------------------"<<std::endl;
+
+    const int leftOverSize = size % 4;
+    const int fourByteAlignedSize = size - leftOverSize;
+    for (; i < fourByteAlignedSize; i = i + 4)
+    {
+        // load 128-bit chunks of each array
+        __m128i first_values = _mm_loadu_si128((__m128i*) &first_array[i]);
+        __m128i second_values = _mm_loadu_si128((__m128i*) &second_array[i]);
+
+        // add each pair of 32-bit integers in the 128-bit chunks
+        first_values = _mm_add_epi32(first_values, second_values);
+
+        // store 128-bit chunk to first array
+        _mm_storeu_si128((__m128i*) &first_array[i], first_values);
+    }
+
+    if (leftOverSize == 0) return 0;
+
+    // handle left-over
+    for (; i < size; i++)
+    {
+        first_array[i] += second_array[i];
+    }
+}
+
+template<typename T>
+void PixelSum::pixelSumPassVerticalPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+{
+    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
+
+    const int srcPixBufWidth  = m_SourcePixBufTLBR.width();
+    const int srcPixBufHeight = m_SourcePixBufTLBR.height();
+
+    if (srcPixBufWidth * srcPixBufHeight == 0) return;
+
+    T* sumAreaPtr = p_SumAreaPixelBuffer;
+    T* prevRow = nullptr;
+    T* currentRow = nullptr;
+    //const uint8_t* pixelBufferPtr = p_PixelBuffer;
+    for (int row = 0; row < srcPixBufHeight; row++)
+    {
+        currentRow = sumAreaPtr;
+        if (row == 0)
+        {
+            //pixelBufferPtr += srcPixBufWidth;
+            sumAreaPtr += srcPixBufWidth;
+            prevRow = currentRow;
+            continue;
+        }
+
+        //T* prevRow = (sumAreaPtr - srcPixBufWidth);
+        //std::cout<< sumAreaPtr[0] << "/ " << sumAreaPtr[1] << "/ " << sumAreaPtr[2] << "/ " << sumAreaPtr[3];
+
+        add_SSE(srcPixBufWidth, currentRow, prevRow);
+        //pixelBufferPtr += srcPixBufWidth;
+        sumAreaPtr += srcPixBufWidth;
+        prevRow = currentRow;
     }
 }
 

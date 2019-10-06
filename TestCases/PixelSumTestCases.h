@@ -1,18 +1,17 @@
 #pragma once
 
-#include "TestcaseHelper.h"
+#include "TestCaseHelper.h"
 
 #include "PixelBuffer.h"
 #include "UtilityFunctions.h"
 #include "PixelSumNaive.h"
-#include "PixelSumTheirs.h"
 #include "PixelSum.h"
 
 #define IMAGE_MAX_DIMENSION 4096
 #define CORRECT_IMAGE_DIMENSION(IMG_DIM) (g_Clamp(IMG_DIM, 0 , IMAGE_MAX_DIMENSION))
 
-const static int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
-const static int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
+const static int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4); // clamp the image if invalid in range.
+const static int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4); // clamp the image if invalid in range.
 const static int IMAGE_BOTTOM = (IMAGE_HEIGHT - 1);
 const static int IMAGE_RIGHT  = (IMAGE_WIDTH  - 1);
 
@@ -38,7 +37,7 @@ void ConfigureMemoryTest()
     EXPECT_EQ(IMAGE_HEIGHT <= 4096, true, "Image Bottom Validation");
 }
 
-void memoryLeak()
+void MemoryLeakTest()
 {
     for (int i = 0; i < 1; i++)
     {
@@ -66,7 +65,7 @@ void memoryLeak()
 }
 
 // This test case matches sum area result from Naive implementation and optimize implementation O(1)
-void getPixelSumVsNaiveSumAreaResult()
+void GetPixelSumVsNaiveSumAreaResult()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -97,8 +96,46 @@ void getPixelSumVsNaiveSumAreaResult()
     delete pixelSum;
     delete pixelSumNaiveImp;
 }
+//void GetPixelSumVsNaiveSumAreaResult()
+//{
+//    Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
-void getPixelSumInvalidRangeTest()
+//    // Fill full pixel buffer with value 1
+//    const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
+//    s_FillFullPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
+//    PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+//    PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+
+//    // Valid inputput range to test if the basic pixel sum logic works correct.
+//    for (int i = 0; i < 1; i++)
+//    {
+////        int x0 = -1;
+////        int y0 = -1;
+////        int x1 = 4;
+////        int y1 = 4;
+
+////        int x0 = 0;
+////        int y0 = 0;
+////        int x1 = 3;
+////        int y1 = 3;
+
+//        int x0 = 2604;
+//        int y0 = 3829;
+//        int x1 = 2606;
+//        int y1 = 3837;
+
+//        std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
+//        EXPECT_FLOAT_EQ(pixelSum->getPixelSum(x0, y0 , x1, y1),
+//                        pixelSumNaiveImp->GetPixelSum(x0, y0 , x1, y1),
+//                        "sss");
+//    }
+
+//    delete image;
+//    delete pixelSum;
+//    delete pixelSumNaiveImp;
+//}
+
+void GetPixelSumInvalidRangeTest()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -118,7 +155,7 @@ void getPixelSumInvalidRangeTest()
     delete pixelSum;
 }
 
-void getPixelAverage()
+void GetPixelAverage()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -147,7 +184,7 @@ void getPixelAverage()
 
 // [NOTE] We are creating objects more than the actual allocation made for pixel buffer objects (MAX_IMAGE_COUNT,
 // MAX_SUMMED_AREA_NON_ZERO, MAX_SUMMED_AREA_PIXEL_BUFFER) if there memory leak the VM would assert
-void memoryLeakTestCopyCtor()
+void MemoryLeakTestCopyCtor()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -177,7 +214,7 @@ void memoryLeakTestCopyCtor()
 
 // [NOTE] We are creating objects more than the actual allocation made for pixel buffer objects (MAX_IMAGE_COUNT,
 // MAX_SUMMED_AREA_NON_ZERO, MAX_SUMMED_AREA_PIXEL_BUFFER) if there memory leak the VM would assert
-void memoryLeakTestPixelSumAssignOperator()
+void MemoryLeakTestPixelSumAssignOperator()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -204,7 +241,7 @@ void memoryLeakTestPixelSumAssignOperator()
     EXPECT_EQ(true, true, "Memory leak test on copy ctor success");
 }
 
-void copyConstructor()
+void CopyConstructor()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -219,8 +256,7 @@ void copyConstructor()
               pixelSumCopyCtrObj->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test");
 }
 
-
-void assignmentOperator()
+void AssignmentOperator()
 {
     // Create a pixel buffer and fill half of data with 1
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -255,7 +291,7 @@ void assignmentOperator()
 }
 
 // Test case to check Non-Zero
-void nonZeroCountElementsCounts()
+void NonZeroCountElementsCounts()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -291,18 +327,15 @@ void TestCaseEntry()
     constexpr int MAX_SUMMED_AREA_NON_ZERO     = MAX_SUMMED_AREA_PIXEL_BUFFER;
 
     PreallocateMemoryVirtualMemory(MAX_IMAGE_COUNT, MAX_SUMMED_AREA_PIXEL_BUFFER, MAX_SUMMED_AREA_NON_ZERO);
-//    Image* imageFullSize = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
-//    PixelSum* pixelSumFullSize = new PixelSum(imageFullSize->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
-//return;
-    TEST_CASE(ConfigureMemoryTest);
-    TEST_CASE(memoryLeak);
-    TEST_CASE(memoryLeakTestCopyCtor);
-    TEST_CASE(memoryLeakTestPixelSumAssignOperator);
-    TEST_CASE(getPixelSumInvalidRangeTest);
-    TEST_CASE(getPixelSumVsNaiveSumAreaResult);
-    TEST_CASE(getPixelAverage);
-    TEST_CASE(copyConstructor);
-    TEST_CASE(assignmentOperator);
-    TEST_CASE(assignmentOperator);
-    TEST_CASE(nonZeroCountElementsCounts);
+
+//    TEST_CASE(ConfigureMemoryTest);
+//    TEST_CASE(MemoryLeakTest);
+//    TEST_CASE(MemoryLeakTestCopyCtor);
+//    TEST_CASE(MemoryLeakTestPixelSumAssignOperator);
+//    TEST_CASE(GetPixelSumInvalidRangeTest);
+    TEST_CASE(GetPixelSumVsNaiveSumAreaResult);
+//    TEST_CASE(GetPixelAverage);
+//    TEST_CASE(CopyConstructor);
+//    TEST_CASE(AssignmentOperator);
+//    TEST_CASE(NonZeroCountElementsCounts);
 }

@@ -1,25 +1,25 @@
 #pragma once
 
 #include <vector>
+#include "UtilityFunctions.h"
+//template<typename T>
+//struct Vector4
+//{
+//    Vector4() = default;
+//    Vector4(float p_Top, float p_Left, float p_Bottom, float p_Right)
+//        : top(p_Top), left(p_Left), bottom(p_Bottom), right(p_Right) {}
 
-template<typename T>
-struct Vector4
-{
-    Vector4() = default;
-    Vector4(float p_Top, float p_Left, float p_Bottom, float p_Right)
-        : top(p_Top), left(p_Left), bottom(p_Bottom), right(p_Right) {}
+//    int width() const { return right + 1; }
+//    int height() const { return bottom + 1; }
 
-    int width() const { return right + 1; }
-    int height() const { return bottom + 1; }
-
-    union
-    {
-        struct{ T top, left, bottom, right; };
-        struct{ T y0 ,   x0,     y1,    x1; };
-    };
-};
-typedef struct Vector4<int> PixelBufferCoords_i; // Pixel buffer's (x0, y0), (x1, y1) representation, _i for type int
-typedef struct Vector4<int> PixBufTLBR_i;        // Pixel buffer's top, left bottom, right representation, _i for type int
+//    union
+//    {
+//        struct{ T top, left, bottom, right; };
+//        struct{ T y0 ,   x0,     y1,    x1; };
+//    };
+//};
+//typedef struct Vector4<int> PixelBufferCoords_i; // Pixel buffer's (x0, y0), (x1, y1) representation, _i for type int
+//typedef struct Vector4<int> PixBufTLBR_i;        // Pixel buffer's top, left bottom, right representation, _i for type int
 
 class PixelSum
 {
@@ -54,13 +54,17 @@ private:
      * Compute the pixel sum in either horizontal or vertical pass. It can compute sumarea for pixel buffer value or non-zero elements
      */
     template<typename T>
-    bool pixelSumPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    void pixelSumPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+
+    template<typename T>
+    void pixelSumPassVerticalPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    int add_SSE(int size, unsigned int* first_array, unsigned int* second_array);
 
     /*!
      * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
      */
     template<typename T>
-    bool computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
+    void computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
 
     /*!
      * Compute the Sum area of the search window coordinates with below formula
@@ -92,7 +96,6 @@ private:
     // Max image size can be 4096x4096 with highest possible val 255, therefore unsigned 32bit storage is more than enough
     uint32_t* m_SumAreaTable = nullptr; /*!< Summed area table for pixel buffer */
 
-    // The non-zero element can be marked with 1 and zero with 0.
-    // With 4096x4096 and 1 as max possible value, 32bit storage suffice.
+    // The non-zero element can be marked with 1 and zero with 0. With 4096x4096 and 1 as max possible value, 32bit storage suffice.
     uint32_t* m_SumAreaNonZeroTable = nullptr; /*!< Summed area table for non-zero pixel buffer */
 };

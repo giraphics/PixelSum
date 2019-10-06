@@ -3,8 +3,8 @@
 #include <stddef.h>
 #include <iostream>
 
+#include "CustomTypes.h"
 #include "PixelSum.h"
-
 
 // std::clamp is C++ 17 feature, the local implementation will sallow to run with older C++ versions
 template<class T>
@@ -55,10 +55,6 @@ static void s_PrintSummedAreaMatrix(const T* p_SumArea, int p_Width, int p_Heigh
 
     std::cout << std::endl;
 }
-
-
-#define FILL_HALF_NON_ZERO_DATA(SIZE, DATA_PTR, NON_ZERO_VAL) for (int i = 0; i < SIZE; i++) { DATA_PTR[i] = (i % 2) ? NON_ZERO_VAL : 0; }
-#define FILL_DATA(SIZE, DATA_PTR, VAL) for (int i = 0; i < SIZE; i++) { DATA_PTR[i] = VAL; }
 
 static void s_FillDataWithContinousNumberStartingWith(size_t p_Size, unsigned char* p_DataPtr, size_t p_StartVal)
 {

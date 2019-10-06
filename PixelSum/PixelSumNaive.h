@@ -1,5 +1,6 @@
 #pragma once
-#include <cstdint>
+
+#include "CustomTypes.h"
 
 // Poor man's implementation for Pixel sum, no summed area.
 class PixelSumNaive
@@ -8,15 +9,11 @@ public:
     PixelSumNaive(const void* p_Buffer, int p_Width, int p_Height);
     ~PixelSumNaive();
 
-    unsigned int GetPixelSum(int x0, int y0, int x1, int y1) const;
-    unsigned int GetNonZeroCount(int x0, int y0, int x1, int y1) const;
-
-private:
-    bool ValidateCoordinates(int& x0, int& y0, int& x1, int& y1) const;
+    int GetPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    int GetNonZeroCount(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    double GetPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
 
 private:
     unsigned char* m_Buffer = nullptr;
-
-    int m_Width  = 0;
-    int m_Height = 0;
+    PixBufTLBR_i m_SourcePixBufTLBR;
 };

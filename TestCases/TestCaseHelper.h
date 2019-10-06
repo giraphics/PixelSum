@@ -14,7 +14,7 @@
 
 bool DoubleCompare(double x, double y)
 {
-    if (int(x * DECIMAL_TOLERANCE) == int(y * DECIMAL_TOLERANCE)) return true;
+    return (int(x * DECIMAL_TOLERANCE) == int(y * DECIMAL_TOLERANCE));
 }
 
 #define EXPECT_EQ(a, b, MSG) \
