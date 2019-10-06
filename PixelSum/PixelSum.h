@@ -1,25 +1,9 @@
 #pragma once
 
-#include <vector>
-#include "UtilityFunctions.h"
-//template<typename T>
-//struct Vector4
-//{
-//    Vector4() = default;
-//    Vector4(float p_Top, float p_Left, float p_Bottom, float p_Right)
-//        : top(p_Top), left(p_Left), bottom(p_Bottom), right(p_Right) {}
+#include <stdint.h>
+#include <cstddef>
 
-//    int width() const { return right + 1; }
-//    int height() const { return bottom + 1; }
-
-//    union
-//    {
-//        struct{ T top, left, bottom, right; };
-//        struct{ T y0 ,   x0,     y1,    x1; };
-//    };
-//};
-//typedef struct Vector4<int> PixelBufferCoords_i; // Pixel buffer's (x0, y0), (x1, y1) representation, _i for type int
-//typedef struct Vector4<int> PixBufTLBR_i;        // Pixel buffer's top, left bottom, right representation, _i for type int
+#include "CustomTypes.h"
 
 class PixelSum
 {
@@ -31,19 +15,13 @@ public:
     PixelSum(const PixelSum& p_PixelSum);
     PixelSum& operator= (const PixelSum& p_PixelSum);
 
-    unsigned int getPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
-    double getPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    unsigned int GetPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    double GetPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
 
-    int getNonZeroCount(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
-    double getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    int GetNonZeroCount(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
+    double GetNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
 
 private:
-    enum class PixelSumPassType
-    {
-        Horizontal = (1u << 0u),
-        Vertical   = (1u << 1u),
-    };
-
     enum class PixelSumOperationType
     {
         SummedAreaTable     = (1u << 0u),
@@ -51,24 +29,31 @@ private:
     };
 
     /*!
-     * Compute the pixel sum in horizontal pass. It can compute sumarea for pixel buffer value or non-zero elements
+     * Compute the pixel sum in horizontal pass. It can compute
+     * (1) sumarea for pixel buffer value or
+     * (2) Non-Zero elements
      */
     template<typename T>
-    void pixelSumHorizontalPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    void PixelSumHorizontalPass(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
 
     /*!
-     * Compute the pixel sum in either horizontal or vertical pass. It can compute sumarea for pixel buffer value or non-zero elements
+     * Compute the pixel sum in either horizontal or vertical pass. It can compute sum area for pixel
+     * buffer value or non-zero elements
      */
     template<typename T>
-    void pixelSumVerticalPass(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    void PixelSumVerticalPass(const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
 
+    /*!
+     * Single Instruction Multiple Data (SIMD) helper function to add two arrays (1) destination and (2) source array
+     * into the destination array.
+     */
     int SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray);
 
     /*!
      * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
      */
     template<typename T>
-    void computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
+    void ComputePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
 
     /*!
      * Compute the Sum area of the search window coordinates with below formula
@@ -86,13 +71,13 @@ private:
      *            C               D
      */
     template<typename T>
-    unsigned int computeSumAreaForSearchWindow(int x0, int y0, int x1, int y1, T* p_SumArea) const;
+    unsigned int ComputeSumAreaForSearchWindow(int x0, int y0, int x1, int y1, T* p_SumArea) const;
 
     /*!
      * Allocate virtual memory from preallocated memory pool for summed area matrix
      */
     template<typename T>
-    bool allocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize);
+    bool AllocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize);
 
 private:
     PixBufTLBR_i m_SourcePixBufTLBR;

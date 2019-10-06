@@ -87,7 +87,7 @@ void GetPixelSumVsNaiveSumAreaResult()
         int y1 = y0 + searchHeight;
 
         std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
-        EXPECT_FLOAT_EQ(pixelSum->getPixelSum(x0, y0 , x1, y1),
+        EXPECT_FLOAT_EQ(pixelSum->GetPixelSum(x0, y0 , x1, y1),
                         pixelSumNaiveImp->GetPixelSum(x0, y0 , x1, y1),
                         "sss");
     }
@@ -145,11 +145,11 @@ void GetPixelSumInvalidRangeTest()
     PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // Test
-    EXPECT_EQ(pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size == Image Size");
+    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size == Image Size");
 
     // Search window is bigger than actual
     const int searchWindowDimension = IMAGE_WIDTH * 10;
-    EXPECT_EQ(pixelSum->getPixelSum(0, 0, searchWindowDimension - 1, searchWindowDimension - 1), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size > Image Size");
+    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, searchWindowDimension - 1, searchWindowDimension - 1), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size > Image Size");
 
     delete image;
     delete pixelSum;
@@ -166,16 +166,16 @@ void GetPixelAverage()
     PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // We request the average of pixels (-2, -2)-(0, 0) the resulting value should be 1/9 (=0.111…).
-    EXPECT_FLOAT_EQ(pixelSum->getPixelAverage(-2, -2, 0, 0), 1.0 / 9.0, "Search Window with top-left outside valid range");
+    EXPECT_FLOAT_EQ(pixelSum->GetPixelAverage(-2, -2, 0, 0), 1.0 / 9.0, "Search Window with top-left outside valid range");
 
     // Request the average of pixels (-10, -10)-(imgBottom+10,imgRight+10) the resulting value should be 4 / 16 (0.25).
-    EXPECT_FLOAT_EQ(pixelSum->getPixelAverage(0, 0, 0, 0), 1.0, "One pixel avg test");
+    EXPECT_FLOAT_EQ(pixelSum->GetPixelAverage(0, 0, 0, 0), 1.0, "One pixel avg test");
 
     int x0Offset = -9;
     int y0Offset = -9;
     int x1Offset = 9;
     int y1Offset = 9;
-    EXPECT_FLOAT_EQ(pixelSum->getPixelAverage((IMAGE_RIGHT + x0Offset), (IMAGE_BOTTOM + y0Offset) , IMAGE_RIGHT + x1Offset, IMAGE_BOTTOM + y1Offset),
+    EXPECT_FLOAT_EQ(pixelSum->GetPixelAverage((IMAGE_RIGHT + x0Offset), (IMAGE_BOTTOM + y0Offset) , IMAGE_RIGHT + x1Offset, IMAGE_BOTTOM + y1Offset),
                     ((abs(x0Offset) + 1) * (abs(y0Offset) + 1)) / static_cast<float>((abs(x1Offset - x0Offset) + 1) * (abs(y1Offset - y0Offset) + 1)),
                     "Search Window bottom right is outside the image region");
 
@@ -206,7 +206,7 @@ void GetPixelAverageVsNaiveSumAreaResult()
         int y1 = y0 + searchHeight;
 
         std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
-        EXPECT_FLOAT_EQ(pixelSum->getPixelAverage(x0, y0 , x1, y1),
+        EXPECT_FLOAT_EQ(pixelSum->GetPixelAverage(x0, y0 , x1, y1),
                         pixelSumNaiveImp->GetPixelAverage(x0, y0 , x1, y1),
                         "sss");
     }
@@ -231,8 +231,8 @@ void MemoryLeakTestCopyCtor()
     for (int i = 0; i < 100; ++i)
     {
         PixelSum* pixelSumCopyCtrObj = new PixelSum(*pixelSum);
-        EXPECT_EQ(pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-                  pixelSumCopyCtrObj->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Create and Desctroyed 100 pixel sum objects and computed their pixel sum.");
+        EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+                  pixelSumCopyCtrObj->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Create and Desctroyed 100 pixel sum objects and computed their pixel sum.");
 
         delete pixelSumCopyCtrObj;
     }
@@ -266,8 +266,8 @@ void MemoryLeakTestPixelSumAssignOperator()
         // Fill empty pixel sum object with assignment operator
         *pixelSumAssignOperatorTest = *pixelSum; // Assignment operator called
 
-        EXPECT_EQ(pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-                  pixelSumAssignOperatorTest->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Create and Desctroyed 100 pixel sum objects and computed their pixel sum.");
+        EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+                  pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Create and Desctroyed 100 pixel sum objects and computed their pixel sum.");
 
         delete pixelSumAssignOperatorTest;
     }
@@ -286,8 +286,8 @@ void CopyConstructor()
 
     PixelSum* pixelSumCopyCtrObj = new PixelSum(*pixelSum);
 
-    EXPECT_EQ(pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-              pixelSumCopyCtrObj->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test");
+    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+              pixelSumCopyCtrObj->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test");
 }
 
 void AssignmentOperator()
@@ -306,16 +306,16 @@ void AssignmentOperator()
     *pixelSumAssignOperatorTest = *pixelSum; // Assignment operator called
 
     // Full image extent pixel sum test
-    EXPECT_EQ(pixelSumAssignOperatorTest->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-              pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test 1");
+    EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test 1");
 
     // Half image extent pixel sum test
-    EXPECT_EQ(pixelSumAssignOperatorTest->getPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1),
-              pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1), "Copy Constructor pixel Sum Test 2");
+    EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1),
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1), "Copy Constructor pixel Sum Test 2");
 
     // Over flow image extent pixel sum test
-    EXPECT_EQ(pixelSumAssignOperatorTest->getPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-              pixelSum->getPixelSum(0, 0, IMAGE_BOTTOM + 10, IMAGE_RIGHT + 10), "Copy Constructor pixel Sum Test 3");
+    EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM + 10, IMAGE_RIGHT + 10), "Copy Constructor pixel Sum Test 3");
 
     // Release pixel buffer
     delete image;
@@ -344,7 +344,7 @@ void NonZeroCountElementsCounts()
         int x1 = x0 + (std::rand() % (IMAGE_WIDTH >> 2));
         int y1 = y0 + (std::rand() % (IMAGE_HEIGHT >> 2));
 
-        EXPECT_EQ(pixelSum->getNonZeroCount(x0, y0, x1, y1),
+        EXPECT_EQ(pixelSum->GetNonZeroCount(x0, y0, x1, y1),
                   pixelSumNaiveImp->GetNonZeroCount(x0, y0, x1, y1),
                         "nonZeroCountElementsCounts");
     }
