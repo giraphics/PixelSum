@@ -22,9 +22,11 @@ set(${PROJECT_NAME}_EXEC_HEADERS
     MemoryMgmt/VirtualMemoryUtils.h
     MemoryMgmt/MemoryAllocator.h
 
-    PixelSum/HelperClasses/ScopedTimer.h
-    PixelSum/HelperClasses/PixelBuffer.h
+    PixelSum/HelperClasses/CustomTypes.h
     PixelSum/HelperClasses/LogMacros.h
+    PixelSum/HelperClasses/PixelBuffer.h
+    PixelSum/HelperClasses/ScopedTimer.h
+    PixelSum/HelperClasses/UtilityFunctions.h
 
     PixelSum/PixelSum.h
     PixelSum/PixelSumNaive.h

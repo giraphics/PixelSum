@@ -29,6 +29,12 @@ private:
     };
 
     /*!
+     * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
+     */
+    template<typename T>
+    void ComputePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
+
+    /*!
      * Compute the pixel sum in horizontal pass. It can compute
      * (1) sumarea for pixel buffer value or
      * (2) Non-Zero elements
@@ -47,13 +53,7 @@ private:
      * Single Instruction Multiple Data (SIMD) helper function to add two arrays (1) destination and (2) source array
      * into the destination array.
      */
-    int SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray);
-
-    /*!
-     * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
-     */
-    template<typename T>
-    void ComputePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf);
+    void SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray);
 
     /*!
      * Compute the Sum area of the search window coordinates with below formula

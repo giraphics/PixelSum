@@ -17,32 +17,11 @@ PixelSum::PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight)
     AllocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaTable, srcBufferPixelCount);
     AllocateVirtualMemoryForSumAreaMatrix<uint32_t>(m_SumAreaNonZeroTable, srcBufferPixelCount);
 
-    // The summed matrix pixel buffer is computed in two passes (1) Horizontal and (2) Vertical
-    {
-        DefaultResults results;
-        ScopedTimer Timer(results);
-        ComputePixelSum<uint32_t>(PixelSumOperationType::SummedAreaTable, p_Buffer, m_SumAreaTable);
-    }
+    // The summed matrix pixel buffer
+    ComputePixelSum<uint32_t>(PixelSumOperationType::SummedAreaTable, p_Buffer, m_SumAreaTable);
 
-    // Non-Zero Element summed matrix is computed in two passes (1) Horizontal and (2) Vertical
-    {
-        DefaultResults results;
-        ScopedTimer Timer(results);
-        ComputePixelSum<uint32_t>(PixelSumOperationType::NonZeroElementCount, p_Buffer, m_SumAreaNonZeroTable);
-    }
-
-    // Note: The two m_SumAreaPixBuf and m_SumAreaNonZero can be computed in single
-    // function call which might a marginal faster but not a good idea for scalablily
-}
-
-template<typename T>
-void PixelSum::ComputePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
-{
-    // Horizontal prefix sum pass
-    PixelSumHorizontalPass<T>(p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
-
-    // SIMD optimized vertical pass
-    PixelSumVerticalPass<T>(p_PixelBuffer, p_SumAreaPixBuf);
+    // Non-Zero Element summed matrix
+    ComputePixelSum<uint32_t>(PixelSumOperationType::NonZeroElementCount, p_Buffer, m_SumAreaNonZeroTable);
 }
 
 PixelSum::~PixelSum()
@@ -131,6 +110,16 @@ double PixelSum::GetNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 }
 
 template<typename T>
+void PixelSum::ComputePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
+{
+    // Horizontal prefix sum pass
+    PixelSumHorizontalPass<T>(p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+
+    // SIMD optimized vertical pass
+    PixelSumVerticalPass<T>(p_PixelBuffer, p_SumAreaPixBuf);
+}
+
+template<typename T>
 void PixelSum::PixelSumHorizontalPass(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
 {
     if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
@@ -155,7 +144,37 @@ void PixelSum::PixelSumHorizontalPass(PixelSumOperationType p_OperationType, con
     }
 }
 
-int PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray)
+template<typename T>
+void PixelSum::PixelSumVerticalPass(const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer)
+{
+    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
+
+    const int srcPixBufWidth  = m_SourcePixBufTLBR.width();
+    const int srcPixBufHeight = m_SourcePixBufTLBR.height();
+
+    if (srcPixBufWidth * srcPixBufHeight == 0) return;
+
+    T* sumAreaPtr = p_SumAreaPixelBuffer;
+    T* prevRow = nullptr;
+    T* currentRow = nullptr;
+    for (int row = 0; row < srcPixBufHeight; row++)
+    {
+        currentRow = sumAreaPtr;
+        if (row == 0) // Skip the first row, since we there is not previous row to add into
+        {
+            sumAreaPtr += srcPixBufWidth;
+            prevRow = currentRow;
+            continue;
+        }
+
+        SimdAddSSE(srcPixBufWidth, currentRow, prevRow);
+
+        sumAreaPtr += srcPixBufWidth;
+        prevRow = currentRow;
+    }
+}
+
+void PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray)
 {
     int i = 0;
 #if 0 // For debugging SIMD arrays
@@ -176,8 +195,8 @@ int PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned in
 #endif
 
     const int leftOverSize = p_ArraySize % 4;
-    const int fourByteAlignedSize = p_ArraySize - leftOverSize;
-    for (; i < fourByteAlignedSize; i = i + 4)
+    const int alignedSize = p_ArraySize - leftOverSize;
+    for (; i < alignedSize; i = i + 4)
     {
         // Load 128-bit chunks of each array
         __m128i destValues = _mm_loadu_si128((__m128i*) &p_DestArray[i]);
@@ -190,56 +209,13 @@ int PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned in
         _mm_storeu_si128((__m128i*) &p_DestArray[i], destValues);
     }
 
-    if (leftOverSize == 0) return 0;
+    if (leftOverSize == 0) return;
 
     // Handle left-over
     for (; i < p_ArraySize; i++)
     {
         p_DestArray[i] += p_SrcArray[i];
     }
-}
-
-template<typename T>
-void PixelSum::PixelSumVerticalPass(const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
-{
-    if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
-
-    const int srcPixBufWidth  = m_SourcePixBufTLBR.width();
-    const int srcPixBufHeight = m_SourcePixBufTLBR.height();
-
-    if (srcPixBufWidth * srcPixBufHeight == 0) return;
-
-    T* sumAreaPtr = p_SumAreaPixelBuffer;
-    T* prevRow = nullptr;
-    T* currentRow = nullptr;
-    //const uint8_t* pixelBufferPtr = p_PixelBuffer;
-    for (int row = 0; row < srcPixBufHeight; row++)
-    {
-        currentRow = sumAreaPtr;
-        if (row == 0)
-        {
-            //pixelBufferPtr += srcPixBufWidth;
-            sumAreaPtr += srcPixBufWidth;
-            prevRow = currentRow;
-            continue;
-        }
-
-        //T* prevRow = (sumAreaPtr - srcPixBufWidth);
-        //std::cout<< sumAreaPtr[0] << "/ " << sumAreaPtr[1] << "/ " << sumAreaPtr[2] << "/ " << sumAreaPtr[3];
-
-        SimdAddSSE(srcPixBufWidth, currentRow, prevRow);
-        //pixelBufferPtr += srcPixBufWidth;
-        sumAreaPtr += srcPixBufWidth;
-        prevRow = currentRow;
-    }
-}
-
-template<typename T>
-bool PixelSum::AllocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize)
-{
-    p_SumAreaMatrix = static_cast<T*>(VM::MemoryAllocator::GetInstance().Allocate(p_AllocSize * sizeof(T)));
-
-    return p_SumAreaMatrix != nullptr;
 }
 
 /********************************************************************************
@@ -285,4 +261,12 @@ unsigned int PixelSum::ComputeSumAreaForSearchWindow(int x0, int y0, int x1, int
     pixelSum += (isX0AtFirstRow && isY0AtFirstCol) ? 0 : *(sumAreaPtr + y0Top + x0Left);    // Region A => (x0 - 1, y0 - 1)
 
     return pixelSum;
+}
+
+template<typename T>
+bool PixelSum::AllocateVirtualMemoryForSumAreaMatrix(T*& p_SumAreaMatrix, size_t p_AllocSize)
+{
+    p_SumAreaMatrix = static_cast<T*>(VM::MemoryAllocator::GetInstance().Allocate(p_AllocSize * sizeof(T)));
+
+    return p_SumAreaMatrix != nullptr;
 }
