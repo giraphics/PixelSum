@@ -155,6 +155,7 @@ void GetPixelSumInvalidRangeTest()
     delete pixelSum;
 }
 
+// This test case matches sum area average result with expected const precalculated result.
 void GetPixelAverage()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -180,6 +181,39 @@ void GetPixelAverage()
 
     delete image;
     delete pixelSum;
+}
+
+// This test case generate random samples and matches sum area average result from Naive implementation and optimize implementation.
+void GetPixelAverageVsNaiveSumAreaResult()
+{
+    Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Fill full pixel buffer with value 1
+    const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
+    s_FillHalfPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
+    PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+    PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Valid inputput range to test if the basic pixel sum logic works correct.
+    for (int i = 0; i < 10; i++)
+    {
+        std::srand(i * 100);
+        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
+        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
+        int searchWidth = (std::rand() % 10) + 1;
+        int searchHeight = (std::rand() % 10) + 1;
+        int x1 = x0 + searchWidth;
+        int y1 = y0 + searchHeight;
+
+        std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
+        EXPECT_FLOAT_EQ(pixelSum->getPixelAverage(x0, y0 , x1, y1),
+                        pixelSumNaiveImp->GetPixelAverage(x0, y0 , x1, y1),
+                        "sss");
+    }
+
+    delete image;
+    delete pixelSum;
+    delete pixelSumNaiveImp;
 }
 
 // [NOTE] We are creating objects more than the actual allocation made for pixel buffer objects (MAX_IMAGE_COUNT,
@@ -328,14 +362,15 @@ void TestCaseEntry()
 
     PreallocateMemoryVirtualMemory(MAX_IMAGE_COUNT, MAX_SUMMED_AREA_PIXEL_BUFFER, MAX_SUMMED_AREA_NON_ZERO);
 
-//    TEST_CASE(ConfigureMemoryTest);
-//    TEST_CASE(MemoryLeakTest);
-//    TEST_CASE(MemoryLeakTestCopyCtor);
-//    TEST_CASE(MemoryLeakTestPixelSumAssignOperator);
-//    TEST_CASE(GetPixelSumInvalidRangeTest);
+    TEST_CASE(ConfigureMemoryTest);
+    TEST_CASE(MemoryLeakTest);
+    TEST_CASE(MemoryLeakTestCopyCtor);
+    TEST_CASE(MemoryLeakTestPixelSumAssignOperator);
+    TEST_CASE(GetPixelSumInvalidRangeTest);
     TEST_CASE(GetPixelSumVsNaiveSumAreaResult);
-//    TEST_CASE(GetPixelAverage);
-//    TEST_CASE(CopyConstructor);
-//    TEST_CASE(AssignmentOperator);
-//    TEST_CASE(NonZeroCountElementsCounts);
+    TEST_CASE(GetPixelAverage);
+    TEST_CASE(GetPixelAverageVsNaiveSumAreaResult);
+    TEST_CASE(CopyConstructor);
+    TEST_CASE(AssignmentOperator);
+    TEST_CASE(NonZeroCountElementsCounts);
 }

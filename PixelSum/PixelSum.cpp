@@ -1,5 +1,6 @@
 #include "PixelSum.h"
 
+#include <immintrin.h>
 #include <iostream>
 
 #include "MemoryAllocator.h"
@@ -37,9 +38,11 @@ PixelSum::PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight)
 template<typename T>
 void PixelSum::computePixelSum(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf)
 {
-    pixelSumPass<T>(PixelSumPassType::Horizontal, p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
-    //pixelSumPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
-    pixelSumPassVerticalPass<T>(PixelSumPassType::Vertical,   p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+    // Horizontal prefix sum pass
+    pixelSumHorizontalPass<T>(PixelSumPassType::Horizontal, p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
+
+    // SIMD optimized vertical pass
+    pixelSumVerticalPass<T>(p_OperationType, p_PixelBuffer, p_SumAreaPixBuf);
 }
 
 PixelSum::~PixelSum()
@@ -162,7 +165,7 @@ double PixelSum::getNonZeroAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const
 //}
 
 template<typename T>
-void PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+void PixelSum::pixelSumHorizontalPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
 {
     if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
 
@@ -175,18 +178,18 @@ void PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p
     const uint8_t* pixelBufferPtr = p_PixelBuffer;
     for (int row = 0; row < srcPixBufHeight; row++)
     {
-        const bool isFirstRow = (row == 0);
+//        const bool isFirstRow = (row == 0);
         for (int col = 0; col < srcPixBufWidth; col++)
         {
-            if (p_PassType == PixelSumPassType::Horizontal)
-            {
+//            if (p_PassType == PixelSumPassType::Horizontal)
+//            {
                 *sumAreaPtr = (p_OperationType == PixelSumOperationType::NonZeroElementCount) ? ((*pixelBufferPtr == 0) ? 0 : 1) : *pixelBufferPtr;
                 *sumAreaPtr += (col == 0)/*isFirstCol*/ ? 0 : *(sumAreaPtr - 1);
-            }
-            else
-            {
-                *sumAreaPtr += isFirstRow ? 0 : *(sumAreaPtr - srcPixBufWidth);
-            }
+//            }
+//            else
+//            {
+//                *sumAreaPtr += isFirstRow ? 0 : *(sumAreaPtr - srcPixBufWidth);
+//            }
 
             pixelBufferPtr++;
 
@@ -195,51 +198,50 @@ void PixelSum::pixelSumPass(PixelSumPassType p_PassType, PixelSumOperationType p
     }
 }
 
-#include <immintrin.h>
-int PixelSum::add_SSE(int size, unsigned int* first_array, unsigned int* second_array)
+int PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray)
 {
     int i = 0;
 //    std::cout<< "Before Curr =>";
-//    for (int j = 0; j < size; ++j)
+//    for (int j = 0; j < p_ArraySize; ++j)
 //    {
-//        std::cout<< second_array[j] << ", ";
+//        std::cout<< p_SrcArray[j] << ", ";
 //    }
 //    std::cout << std::endl;
 
 //    std::cout<< "Before Prev =>";
-//    for (int j = 0; j < size; ++j)
+//    for (int j = 0; j < p_ArraySize; ++j)
 //    {
-//        std::cout<< first_array[j] << ", ";
+//        std::cout<< p_DestArray[j] << ", ";
 //    }
 //    std::cout << std::endl;
 //    std::cout << "----------------------------------------"<<std::endl;
 
-    const int leftOverSize = size % 4;
-    const int fourByteAlignedSize = size - leftOverSize;
+    const int leftOverSize = p_ArraySize % 4;
+    const int fourByteAlignedSize = p_ArraySize - leftOverSize;
     for (; i < fourByteAlignedSize; i = i + 4)
     {
         // load 128-bit chunks of each array
-        __m128i first_values = _mm_loadu_si128((__m128i*) &first_array[i]);
-        __m128i second_values = _mm_loadu_si128((__m128i*) &second_array[i]);
+        __m128i first_values = _mm_loadu_si128((__m128i*) &p_DestArray[i]);
+        __m128i second_values = _mm_loadu_si128((__m128i*) &p_SrcArray[i]);
 
         // add each pair of 32-bit integers in the 128-bit chunks
         first_values = _mm_add_epi32(first_values, second_values);
 
         // store 128-bit chunk to first array
-        _mm_storeu_si128((__m128i*) &first_array[i], first_values);
+        _mm_storeu_si128((__m128i*) &p_DestArray[i], first_values);
     }
 
     if (leftOverSize == 0) return 0;
 
     // handle left-over
-    for (; i < size; i++)
+    for (; i < p_ArraySize; i++)
     {
-        first_array[i] += second_array[i];
+        p_DestArray[i] += p_SrcArray[i];
     }
 }
 
 template<typename T>
-void PixelSum::pixelSumPassVerticalPass(PixelSumPassType p_PassType, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
+void PixelSum::pixelSumVerticalPass(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixelBuffer/*, T* p_SumAreaNonZero*/)
 {
     if (!p_PixelBuffer || !p_SumAreaPixelBuffer) return;
 
@@ -266,7 +268,7 @@ void PixelSum::pixelSumPassVerticalPass(PixelSumPassType p_PassType, PixelSumOpe
         //T* prevRow = (sumAreaPtr - srcPixBufWidth);
         //std::cout<< sumAreaPtr[0] << "/ " << sumAreaPtr[1] << "/ " << sumAreaPtr[2] << "/ " << sumAreaPtr[3];
 
-        add_SSE(srcPixBufWidth, currentRow, prevRow);
+        SimdAddSSE(srcPixBufWidth, currentRow, prevRow);
         //pixelBufferPtr += srcPixBufWidth;
         sumAreaPtr += srcPixBufWidth;
         prevRow = currentRow;

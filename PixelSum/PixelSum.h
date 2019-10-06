@@ -51,14 +51,18 @@ private:
     };
 
     /*!
+     * Compute the pixel sum in horizontal pass. It can compute sumarea for pixel buffer value or non-zero elements
+     */
+    template<typename T>
+    void pixelSumHorizontalPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+
+    /*!
      * Compute the pixel sum in either horizontal or vertical pass. It can compute sumarea for pixel buffer value or non-zero elements
      */
     template<typename T>
-    void pixelSumPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
+    void pixelSumVerticalPass(PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
 
-    template<typename T>
-    void pixelSumPassVerticalPass(PixelSumPassType p_IsHPass, PixelSumOperationType p_OperationType, const unsigned char* p_PixelBuffer, T* p_SumAreaPixBuf/*, T* p_SumAreaNonZero*/);
-    int add_SSE(int size, unsigned int* first_array, unsigned int* second_array);
+    int SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned int* p_SrcArray);
 
     /*!
      * Calls pixelSumPass(..) with Horizontal pass followed with Vertical pass.
