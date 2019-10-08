@@ -339,8 +339,8 @@ void NonZeroCountElementsCounts()
     delete pixelSumNaiveImp;
 }
 
-// Test case to check Non-Zero elements
-void NanValueTest()
+// Test case to check no Nan value is returned by GetPixelAverage() or GetNonZeroAverage() function
+void NanReturnValueTest()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
 
@@ -350,19 +350,13 @@ void NanValueTest()
     PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
     PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    // Valid inputput range to test if the basic pixel sum logic works correct.
-    for (int i = 0; i < 10; i++)
-    {
-        std::srand(i * 100);
-        int x0 = std::rand() % (IMAGE_WIDTH >> 1);
-        int y0 = std::rand() % (IMAGE_HEIGHT >> 1);
-        int x1 = x0 + (std::rand() % (IMAGE_WIDTH >> 2));
-        int y1 = y0 + (std::rand() % (IMAGE_HEIGHT >> 2));
+    EXPECT_EQ(pixelSum->GetNonZeroAverage(-1, -1, -1, -1),
+              0.0,
+              "GetNonZeroAverage() Nan return value test");
 
-        EXPECT_EQ(pixelSum->GetNonZeroCount(-1, -1, -1, -1),
-                  pixelSumNaiveImp->GetNonZeroCount(-1, -1, -1, -1),
-                  "Random sample search window sample to compute non-zero element counts");
-    }
+    EXPECT_EQ(pixelSum->GetPixelAverage(-1, -1, -1, -1),
+              0.0,
+              "GetPixelAverage() Nan return value test");
 
     delete image;
     delete pixelSum;
@@ -389,5 +383,5 @@ void TestCaseEntry()
     TEST_CASE(CopyConstructor);
     TEST_CASE(AssignmentOperator);
     TEST_CASE(NonZeroCountElementsCounts);
-    TEST_CASE(NanValueTest);
+    TEST_CASE(NanReturnValueTest);
 }

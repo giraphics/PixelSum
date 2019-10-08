@@ -217,6 +217,7 @@ void PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned i
         *(p_DestArray + i) += *(p_SrcArray + i);
     }
 }
+
 /********************************************************************************
         0              1              2               3      A => Area((0,0) To (1, 1))
       0 +--------------+------------------------------+
