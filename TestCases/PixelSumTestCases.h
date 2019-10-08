@@ -7,11 +7,11 @@
 #include "PixelSumNaive.h"
 #include "PixelSum.h"
 
-#define IMAGE_MAX_DIMENSION 4096
-#define CORRECT_IMAGE_DIMENSION(IMG_DIM) (g_Clamp(IMG_DIM, 0 , IMAGE_MAX_DIMENSION))
+#define MAX_SUPPORTED_IMAGE_DIMENSION 4096
+#define CORRECT_IMAGE_DIMENSION(IMG_DIM) (g_Clamp(IMG_DIM, 0 , MAX_SUPPORTED_IMAGE_DIMENSION))
 
-const static int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4); // clamp the image if invalid in range.
-const static int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4); // clamp the image if invalid in range.
+const static int IMAGE_WIDTH  = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
+const static int IMAGE_HEIGHT = CORRECT_IMAGE_DIMENSION(4096); // clamp the image if invalid in range.
 const static int IMAGE_BOTTOM = (IMAGE_HEIGHT - 1);
 const static int IMAGE_RIGHT  = (IMAGE_WIDTH  - 1);
 
@@ -33,13 +33,15 @@ void ConfigureMemoryTest()
     EXPECT_EQ(IMAGE_WIDTH  > 0, true, "Image Left Validation");
     EXPECT_EQ(IMAGE_HEIGHT > 0, true, "Image Top Validation");
 
-    EXPECT_EQ(IMAGE_WIDTH  <= 4096, true, "Image Right Validation");
-    EXPECT_EQ(IMAGE_HEIGHT <= 4096, true, "Image Bottom Validation");
+    EXPECT_EQ(IMAGE_WIDTH  <= MAX_SUPPORTED_IMAGE_DIMENSION, true, "Image Right Validation");
+    EXPECT_EQ(IMAGE_HEIGHT <= MAX_SUPPORTED_IMAGE_DIMENSION, true, "Image Bottom Validation");
 }
 
+// Memory leak test for class Image and class Pixel sum 100 objects are continous allocated and deallocated.
+// Not that our preallocate memory is limited. Therefore, if there is leak the applciation must crash.
 void MemoryLeakTest()
 {
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < 30; i++)
     {
         // Create a full size pixel buffer and fill half data with 1
         Image* imageFullSize = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -61,7 +63,8 @@ void MemoryLeakTest()
         delete pixelSumHalfSize;
     }
 
-    EXPECT_EQ(IMAGE_WIDTH  <= 4096, true, "100 image allocation/deallocation and pixelSum Right Validation");
+    // If this test case is printed, it mean the application is still alive and there are not memory leaks
+    EXPECT_EQ(true, true, "30 image pixel sum class object with full and half size pixel buffers");
 }
 
 // This test case matches sum area result from Naive implementation and optimize implementation O(1)
@@ -71,16 +74,16 @@ void GetPixelSumVsNaiveSumAreaResult()
 
     // Fill full pixel buffer with value 1
     const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
-    s_FillHalfPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
+    s_FillDataWithContinousNumberStartingWith(dataSize, image->GetPixelBufferPtr(), 1);
     PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
     PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // Valid inputput range to test if the basic pixel sum logic works correct.
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 50; i++)
     {
         std::srand(i * 100);
-        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
-        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
+        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
+        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
         int searchWidth = (std::rand() % 10) + 1;
         int searchHeight = (std::rand() % 10) + 1;
         int x1 = x0 + searchWidth;
@@ -89,51 +92,13 @@ void GetPixelSumVsNaiveSumAreaResult()
         std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
         EXPECT_FLOAT_EQ(pixelSum->GetPixelSum(x0, y0 , x1, y1),
                         pixelSumNaiveImp->GetPixelSum(x0, y0 , x1, y1),
-                        "sss");
+                        "Testing GetPixelSum() result with naive implementation.");
     }
 
     delete image;
     delete pixelSum;
     delete pixelSumNaiveImp;
 }
-//void GetPixelSumVsNaiveSumAreaResult()
-//{
-//    Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
-
-//    // Fill full pixel buffer with value 1
-//    const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
-//    s_FillFullPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
-//    PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
-//    PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
-
-//    // Valid inputput range to test if the basic pixel sum logic works correct.
-//    for (int i = 0; i < 1; i++)
-//    {
-////        int x0 = -1;
-////        int y0 = -1;
-////        int x1 = 4;
-////        int y1 = 4;
-
-////        int x0 = 0;
-////        int y0 = 0;
-////        int x1 = 3;
-////        int y1 = 3;
-
-//        int x0 = 2604;
-//        int y0 = 3829;
-//        int x1 = 2606;
-//        int y1 = 3837;
-
-//        std::cout << "Search Window: x0: " << x0 << ", y0: " << y0 << ", x1: " << x1 << ", y1: " << y1 << std::endl;
-//        EXPECT_FLOAT_EQ(pixelSum->getPixelSum(x0, y0 , x1, y1),
-//                        pixelSumNaiveImp->GetPixelSum(x0, y0 , x1, y1),
-//                        "sss");
-//    }
-
-//    delete image;
-//    delete pixelSum;
-//    delete pixelSumNaiveImp;
-//}
 
 void GetPixelSumInvalidRangeTest()
 {
@@ -144,12 +109,16 @@ void GetPixelSumInvalidRangeTest()
     s_FillHalfPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
     PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
-    // Test
-    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size == Image Size");
+    // Search window in bound test
+    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+                                    (IMAGE_HEIGHT * IMAGE_WIDTH) / 2,
+                                    "Search Window Size == Image Size");
 
-    // Search window is bigger than actual
+    // Search window out bound test
     const int searchWindowDimension = IMAGE_WIDTH * 10;
-    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, searchWindowDimension - 1, searchWindowDimension - 1), (IMAGE_HEIGHT * IMAGE_WIDTH) / 2, "Search Window Size > Image Size");
+    EXPECT_EQ(pixelSum->GetPixelSum(0, 0, searchWindowDimension - 1, searchWindowDimension - 1),
+                                   (IMAGE_HEIGHT * IMAGE_WIDTH) / 2,
+                                   "Search Window out of bound test. Search Window Size > Image Size");
 
     delete image;
     delete pixelSum;
@@ -195,11 +164,11 @@ void GetPixelAverageVsNaiveSumAreaResult()
     PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // Valid inputput range to test if the basic pixel sum logic works correct.
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 100; i++)
     {
         std::srand(i * 100);
-        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
-        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % IMAGE_MAX_DIMENSION);
+        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
+        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
         int searchWidth = (std::rand() % 10) + 1;
         int searchHeight = (std::rand() % 10) + 1;
         int x1 = x0 + searchWidth;
@@ -267,7 +236,8 @@ void MemoryLeakTestPixelSumAssignOperator()
         *pixelSumAssignOperatorTest = *pixelSum; // Assignment operator called
 
         EXPECT_EQ(pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-                  pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Create and Desctroyed 100 pixel sum objects and computed their pixel sum.");
+                  pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
+                  "Memory leak test, Creating and Desctroying 100 pixel sum objects and computed their pixel sum.");
 
         delete pixelSumAssignOperatorTest;
     }
@@ -305,17 +275,32 @@ void AssignmentOperator()
     // Fill empty pixel sum object with assignment operator
     *pixelSumAssignOperatorTest = *pixelSum; // Assignment operator called
 
+    for (int i = 0; i < 10; i++)
+    {
+        std::srand(i * 100);
+        int x0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
+        int y0 = CORRECT_IMAGE_DIMENSION(std::rand() % MAX_SUPPORTED_IMAGE_DIMENSION);
+        int searchWidth = (std::rand() % 10) + 1;
+        int searchHeight = (std::rand() % 10) + 1;
+        int x1 = x0 + searchWidth;
+        int y1 = y0 + searchHeight;
+
+        // Random sample test
+        EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(x0, y0, x1, y1),
+                  pixelSum->GetPixelSum(x0, y0, x1, y1), "Assignment operator random pixel sum sampling test");
+    }
+
     // Full image extent pixel sum test
     EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Copy Constructor pixel Sum Test 1");
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT), "Assignment operator - Full image extent pixel sum test");
 
     // Half image extent pixel sum test
     EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1),
-              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1), "Copy Constructor pixel Sum Test 2");
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM >> 1, IMAGE_RIGHT >> 1), "Assignment operator - Half image extent pixel sum test");
 
     // Over flow image extent pixel sum test
     EXPECT_EQ(pixelSumAssignOperatorTest->GetPixelSum(0, 0, IMAGE_BOTTOM, IMAGE_RIGHT),
-              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM + 10, IMAGE_RIGHT + 10), "Copy Constructor pixel Sum Test 3");
+              pixelSum->GetPixelSum(0, 0, IMAGE_BOTTOM + 10, IMAGE_RIGHT + 10), "Assignment operator - Over flow image extent pixel sum test");
 
     // Release pixel buffer
     delete image;
@@ -324,7 +309,7 @@ void AssignmentOperator()
     delete pixelSum;
 }
 
-// Test case to check Non-Zero
+// Test case to check Non-Zero elements
 void NonZeroCountElementsCounts()
 {
     Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -346,13 +331,44 @@ void NonZeroCountElementsCounts()
 
         EXPECT_EQ(pixelSum->GetNonZeroCount(x0, y0, x1, y1),
                   pixelSumNaiveImp->GetNonZeroCount(x0, y0, x1, y1),
-                        "nonZeroCountElementsCounts");
+                  "Random sample search window sample to compute non-zero element counts");
     }
 
     delete image;
     delete pixelSum;
     delete pixelSumNaiveImp;
 }
+
+// Test case to check Non-Zero elements
+void NanValueTest()
+{
+    Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Fill full pixel buffer with value 1
+    const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
+    s_FillHalfPixelBufferWithConstValue(dataSize, image->GetPixelBufferPtr(), 1);
+    PixelSum* pixelSum = new PixelSum(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+    PixelSumNaive* pixelSumNaiveImp = new PixelSumNaive(image->GetPixelBufferPtr(), IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Valid inputput range to test if the basic pixel sum logic works correct.
+    for (int i = 0; i < 10; i++)
+    {
+        std::srand(i * 100);
+        int x0 = std::rand() % (IMAGE_WIDTH >> 1);
+        int y0 = std::rand() % (IMAGE_HEIGHT >> 1);
+        int x1 = x0 + (std::rand() % (IMAGE_WIDTH >> 2));
+        int y1 = y0 + (std::rand() % (IMAGE_HEIGHT >> 2));
+
+        EXPECT_EQ(pixelSum->GetNonZeroCount(-1, -1, -1, -1),
+                  pixelSumNaiveImp->GetNonZeroCount(-1, -1, -1, -1),
+                  "Random sample search window sample to compute non-zero element counts");
+    }
+
+    delete image;
+    delete pixelSum;
+    delete pixelSumNaiveImp;
+}
+
 
 void TestCaseEntry()
 {
@@ -373,4 +389,5 @@ void TestCaseEntry()
     TEST_CASE(CopyConstructor);
     TEST_CASE(AssignmentOperator);
     TEST_CASE(NonZeroCountElementsCounts);
+    TEST_CASE(NanValueTest);
 }

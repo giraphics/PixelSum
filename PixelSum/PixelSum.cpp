@@ -199,14 +199,14 @@ void PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned i
     for (; i < alignedSize; i = i + 4)
     {
         // Load 128-bit chunks of each array
-        __m128i destValues = _mm_loadu_si128((__m128i*) &p_DestArray[i]);
-        __m128i srcValues = _mm_loadu_si128((__m128i*) &p_SrcArray[i]);
+        __m128i destValues = _mm_loadu_si128((__m128i*) (p_DestArray + i));
+        __m128i srcValues = _mm_loadu_si128((__m128i*) (p_SrcArray + i));
 
         // Add each pair of 32-bit integers in the 128-bit chunks
         destValues = _mm_add_epi32(destValues, srcValues);
 
         // Store 128-bit chunk to destination array
-        _mm_storeu_si128((__m128i*) &p_DestArray[i], destValues);
+        _mm_storeu_si128((__m128i*) (p_DestArray + i), destValues);
     }
 
     if (leftOverSize == 0) return;
@@ -214,10 +214,9 @@ void PixelSum::SimdAddSSE(int p_ArraySize, unsigned int* p_DestArray, unsigned i
     // Handle left-over
     for (; i < p_ArraySize; i++)
     {
-        p_DestArray[i] += p_SrcArray[i];
+        *(p_DestArray + i) += *(p_SrcArray + i);
     }
 }
-
 /********************************************************************************
         0              1              2               3      A => Area((0,0) To (1, 1))
       0 +--------------+------------------------------+
