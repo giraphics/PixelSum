@@ -5,6 +5,8 @@
 
 #include "CustomTypes.h"
 
+// Simd optimize and thread scalable PixelSum implementation.
+// The implementation precomputes the summed area table (SAT) using horizontal and vertical pass.
 class PixelSum
 {
 public:

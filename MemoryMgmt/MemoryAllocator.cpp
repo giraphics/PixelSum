@@ -44,7 +44,7 @@ bool MemoryAllocator::ConfigureMemory(std::vector<UserMemoryRequirementConfig> p
     for (size_t i = 0; i < userMemoryRequirementSize; i++)
     {
         size_t poolSize = p_UserMemoryRequirement.at(i).memorySize;
-        GFX_NEXT_POWER_OF_2(poolSize);
+        VM_NEXT_POWER_OF_2(poolSize);
         m_VirtualMemoryTable[i].poolSize = poolSize;
         m_VirtualMemoryTable[i].poolCapacity = poolSize * p_UserMemoryRequirement.at(i).memoryInstances;
     }

@@ -2,7 +2,7 @@
 
 #include "CustomTypes.h"
 
-// Poor man's implementation for Pixel sum, no summed area.
+// Poor man's implementation for Pixel sum, contains no summed area table.
 class PixelSumNaive
 {
 public:

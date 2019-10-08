@@ -81,7 +81,7 @@ void* VirtualMemoryPool::AllocateVirtualMemory(size_t p_Size)
         p_Size = m_PoolConfig[0].poolSize;
     }
 
-    GFX_NEXT_POWER_OF_2(p_Size);
+    VM_NEXT_POWER_OF_2(p_Size);
     if (p_Size <= m_PoolConfig[m_PoolCount - 1].poolSize)
     {
         uint32_t poolIndex = m_PoolSizeLookupTableIdx[p_Size];
@@ -92,8 +92,8 @@ void* VirtualMemoryPool::AllocateVirtualMemory(size_t p_Size)
         }
 
         void* pNewAddress = pPool->currentAddress;
-        void* pNextAddress = GFX_ADVANCE_POINTER_BY_OFFSET(pNewAddress, p_Size);
-        if (GFX_IS_VALID_RANGE(pNextAddress, pPool->baseAddress, GFX_ADVANCE_POINTER_BY_OFFSET(pPool->baseAddress, pPool->pageAlloc.size)))
+        void* pNextAddress = VM_ADVANCE_POINTER_BY_OFFSET(pNewAddress, p_Size);
+        if (VM_IS_VALID_RANGE(pNextAddress, pPool->baseAddress, VM_ADVANCE_POINTER_BY_OFFSET(pPool->baseAddress, pPool->pageAlloc.size)))
         {
             pPool->currentAddress = pNextAddress;
             pPool->usedByteSize += p_Size;
@@ -115,7 +115,7 @@ void VirtualMemoryPool::FreeVirtualMemory(void* p_Pointer)
     {
         MemoryPage* pPool = &m_VMPool->pools[index];
         void* pHead = pPool->baseAddress;
-        if (GFX_IS_VALID_RANGE(p_Pointer, pHead, GFX_ADVANCE_POINTER_BY_OFFSET(pHead, pPool->pageAlloc.size)))
+        if (VM_IS_VALID_RANGE(p_Pointer, pHead, VM_ADVANCE_POINTER_BY_OFFSET(pHead, pPool->pageAlloc.size)))
         {
             pPool->freeStack.addressPtr[pPool->freeStack.count++] = p_Pointer;
             pPool->usedByteSize -= pPool->elementSize;
@@ -154,7 +154,7 @@ size_t VirtualMemoryPool::TotalMemoryCapacity()
 
 void VirtualMemoryPool::PrintStats()
 {
-    size_t minCapacity = GFX_MEM_MB(99);
+    size_t minCapacity = VM_MEM_MB(99);
     for (uint32_t poolIdx = 0; poolIdx < m_PoolCount; ++poolIdx)
     {
         if (minCapacity > m_PoolConfig[poolIdx].poolCapacity)
