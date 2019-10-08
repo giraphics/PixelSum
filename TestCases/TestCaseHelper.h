@@ -3,14 +3,12 @@
 #include <cmath>    // isgreaterequal
 #include <iostream>
 
-#define RUN    "[RUN TESTCASE] "
-#define FAILED "[      FAILED] "
-#define OK     "[          OK] "
+#define RUN    "[RUNNING TESTCASE] "
+#define FAILED "[          FAILED] "
+#define OK     "[              OK] "
 
 #define TEST_CASE(X) { std::cout << RUN << #X << std::endl; X(); }
 #define DECIMAL_TOLERANCE 1000000
-
-#define EPSILON 2^-52
 
 bool DoubleCompare(double x, double y)
 {

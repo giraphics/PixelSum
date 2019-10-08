@@ -10,6 +10,8 @@
 PixelSum::PixelSum(const unsigned char* p_Buffer, int p_XWidth, int p_YHeight)
     : m_SourcePixBufTLBR(0 /*Top Coord*/, 0/*Left Coord*/, p_YHeight - 1/*Bottom Coord*/, p_XWidth - 1/*Right Coord*/)
 {
+    if (p_XWidth * p_YHeight <= 0) return;
+
     // Pixel Sum Allocations are made from preallocated virtual memory
     // This helps in quick allocation and deallocation of pixel sum preventing performance hiches
     // that can cause by constant allocation and deallocation Pixel Sum class objects.

@@ -5,6 +5,21 @@
 
 #include "CustomTypes.h"
 
+//----------------------------------------------------------------------------
+// Class for providing fast region queries from an 8-bit pixel buffer.
+// Note: all coordinates are *inclusive* and clamped internally to the borders
+// of the buffer by the implementation.
+//
+// For example: getPixelSum(4,8,7,10) gets the sum of a 4x3 region where top left
+// corner is located at (4,8) and bottom right at (7,10). In other words
+// all coordinates are _inclusive_.
+//
+// If the resulting region after clamping is empty, the return value for all
+// functions should be 0.
+//
+// The width and height of the buffer dimensions < 4096 x 4096.
+//----------------------------------------------------------------------------
+
 // Simd optimize and thread scalable PixelSum implementation.
 // The implementation precomputes the summed area table (SAT) using horizontal and vertical pass.
 class PixelSum
@@ -16,6 +31,9 @@ public:
 
     PixelSum(const PixelSum& p_PixelSum);
     PixelSum& operator= (const PixelSum& p_PixelSum);
+
+    // Note: I have changed the signatures of function and arguments to stick with same coding style through out.
+    // Please refer to 'Coding style and guidelines' in the test assignment document more detailed info.
 
     unsigned int GetPixelSum(int p_X0, int p_Y0, int p_X1, int p_Y1) const;
     double GetPixelAverage(int p_X0, int p_Y0, int p_X1, int p_Y1) const;

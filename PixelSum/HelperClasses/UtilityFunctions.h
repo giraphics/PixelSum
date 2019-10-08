@@ -58,7 +58,7 @@ static void s_PrintSummedAreaMatrix(const T* p_SumArea, int p_Width, int p_Heigh
 
 static void s_FillDataWithContinousNumberStartingWith(size_t p_Size, unsigned char* p_DataPtr, size_t p_StartVal)
 {
-    for (size_t i = 0; i < p_Size; i++) { p_DataPtr[i] = (p_StartVal + i); }
+    for (size_t i = 0; i < p_Size; i++) { p_DataPtr[i] = (p_StartVal + i) % 255; }
 }
 
 static void s_FillHalfPixelBufferWithConstValue(size_t p_Size, unsigned char* p_DataPtr, uint8_t p_Val)

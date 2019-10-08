@@ -4,7 +4,7 @@
 #include <time.h>
 #include <string.h>
 
-static inline char *currentTime();
+static inline char* currentTime();
 
 #define _FILE strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__
 

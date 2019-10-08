@@ -3,9 +3,10 @@
 #include "TestCaseHelper.h"
 
 #include "PixelBuffer.h"
-#include "UtilityFunctions.h"
 #include "PixelSumNaive.h"
 #include "PixelSum.h"
+#include "ScopedTimer.h"
+#include "UtilityFunctions.h"
 
 #define MAX_SUPPORTED_IMAGE_DIMENSION 4096
 #define CORRECT_IMAGE_DIMENSION(IMG_DIM) (g_Clamp(IMG_DIM, 0 , MAX_SUPPORTED_IMAGE_DIMENSION))
@@ -363,6 +364,37 @@ void NanReturnValueTest()
     delete pixelSumNaiveImp;
 }
 
+// Test case to check no Nan value is returned by GetPixelAverage() or GetNonZeroAverage() function
+void SATPlusAllocationPerformanceTest()
+{
+    Image* image = new Image(IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Fill full pixel buffer with value 1
+    const size_t dataSize = IMAGE_WIDTH * IMAGE_HEIGHT;
+    PixelSum* pixelSum = nullptr;
+    s_FillDataWithContinousNumberStartingWith(dataSize, image->GetPixelBufferPtr(), 2);
+
+    for (int i = 0; i < 8; i++)
+    {
+        const int width = (IMAGE_WIDTH >> i);
+        const int height = (IMAGE_HEIGHT >> i);
+
+        if (width * height <= 0) break;
+
+        std::cout << "Performance test includes 2 allocations and 2 SAT creation for (a) Pixel buffer SAT (b) Non-zero element" << std::endl;
+        std::cout << "Image Size: Width = " << width << ", Height = " << height << std::endl;
+
+        {
+            DefaultResults results;
+            ScopedTimer Timer(results);
+            pixelSum = new PixelSum(image->GetPixelBufferPtr(), width, height);
+        }
+
+        delete pixelSum;
+    }
+
+    delete image;
+}
 
 void TestCaseEntry()
 {
@@ -373,15 +405,22 @@ void TestCaseEntry()
     PreallocateMemoryVirtualMemory(MAX_IMAGE_COUNT, MAX_SUMMED_AREA_PIXEL_BUFFER, MAX_SUMMED_AREA_NON_ZERO);
 
     TEST_CASE(ConfigureMemoryTest);
+
     TEST_CASE(MemoryLeakTest);
     TEST_CASE(MemoryLeakTestCopyCtor);
     TEST_CASE(MemoryLeakTestPixelSumAssignOperator);
+
     TEST_CASE(GetPixelSumInvalidRangeTest);
     TEST_CASE(GetPixelSumVsNaiveSumAreaResult);
+
     TEST_CASE(GetPixelAverage);
     TEST_CASE(GetPixelAverageVsNaiveSumAreaResult);
+
     TEST_CASE(CopyConstructor);
     TEST_CASE(AssignmentOperator);
+
     TEST_CASE(NonZeroCountElementsCounts);
     TEST_CASE(NanReturnValueTest);
+
+    TEST_CASE(SATPlusAllocationPerformanceTest);
 }

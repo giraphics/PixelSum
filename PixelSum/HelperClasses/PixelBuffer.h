@@ -2,7 +2,7 @@
 
 #include "MemoryAllocator.h"
 
-// An Image helper class that hold the pixel buffer.
+// An Image helper class that holds the pixel buffer.
 class Image
 {
 public:

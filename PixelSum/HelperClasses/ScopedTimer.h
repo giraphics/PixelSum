@@ -25,8 +25,8 @@ private:
 // Default class for measuring performance, you can customise or add new class as per your need
 struct DefaultResults
 {
-    void operator()(long p_NanoSeconds)
+    void operator()(long p_MicroSeconds)
     {
-        std::cout << "Performance:      : " << p_NanoSeconds << std::endl;
+        std::cout << "Performance:      : " << p_MicroSeconds << " µs"<< std::endl;
     }
 };
